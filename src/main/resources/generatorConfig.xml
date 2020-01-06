@@ -5,7 +5,7 @@
 
 <generatorConfiguration>
     <classPathEntry location="/Users/pine/.m2/repository/mysql/mysql-connector-java/8.0.18/mysql-connector-java-8.0.18.jar"/>
-    <context id="MysqlContext" targetRuntime="MyBatis3Simple" defaultModelType="flat">
+    <context id="MysqlContext" targetRuntime="MyBatis3" defaultModelType="flat">
         <plugin type="org.mybatis.generator.plugins.FluentBuilderMethodsPlugin" />
         <plugin type="org.mybatis.generator.plugins.ToStringPlugin" />
         <plugin type="org.mybatis.generator.plugins.SerializablePlugin" />
@@ -34,7 +34,7 @@
         </javaClientGenerator>
 
         <table tableName="t_coffee" domainObjectName="Coffee" >
-            <generatedKey column="id" sqlStatement="CALL IDENTITY()" identity="true" />
+            <generatedKey column="id" sqlStatement="SELECT LAST_INSERT_ID()" identity="true" />
             <columnOverride column="price" javaType="org.joda.money.Money" jdbcType="BIGINT"
                             typeHandler="com.example.springbucks.handler.MoneyTypeHandler"/>
         </table>
