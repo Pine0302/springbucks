@@ -1,9 +1,12 @@
 package com.example.springbucks;
 
 import com.example.springbucks.mapper.CoffeeMapper;
+import com.example.springbucks.mapper.CoffeeMapperPageHelper;
 import com.example.springbucks.model.Coffee;
 import com.example.springbucks.model.CoffeeExample;
+import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.session.RowBounds;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
 import org.mybatis.generator.api.MyBatisGenerator;
@@ -28,6 +31,9 @@ public class SpringbucksApplication implements ApplicationRunner {
 	@Autowired
 	private CoffeeMapper coffeeMapper;
 
+	@Autowired
+	private CoffeeMapperPageHelper coffeeMapperPageHelper;
+
 	public static void main(String[] args) {
 		SpringApplication.run(SpringbucksApplication.class, args);
 	}
@@ -35,7 +41,8 @@ public class SpringbucksApplication implements ApplicationRunner {
 	@Override
 	public void run(ApplicationArguments args) throws Exception{
 		//generateArtifacts();
-		playWithArtifacts();
+		//playWithArtifacts();
+		palyWithPageHelper();
 	}
 
 	private void generateArtifacts() throws Exception{
@@ -48,22 +55,26 @@ public class SpringbucksApplication implements ApplicationRunner {
 		myBatisGenerator.generate(null);
 	}
 
+	/**
+	 * mysql insert&query
+	 */
 	private void playWithArtifacts(){
 		Coffee quechao = new Coffee()
 				.withName("quechao")
 				.withPrice(Money.of(CurrencyUnit.of("CNY"),20.0))
 				.withCreateTime(new Date())
 				.withUpdateTime(new Date());
-
-		coffeeMapper.insert(quechao);
-
+		Integer i;
+		i = coffeeMapper.insert(quechao);
+		log.info("第一次插入返回： {} ",i);
 		Coffee latte = new Coffee()
 				.withName("latte")
 				.withPrice(Money.of(CurrencyUnit.of("CNY"),20.0))
 				.withCreateTime(new Date())
 				.withUpdateTime(new Date());
-		coffeeMapper.insert(latte);
-
+		i = coffeeMapper.insert(latte);
+		log.info("第二次插入返回： {} ",i);
+		log.info("返回值与插入条数有关，与插入的id值无关 ");
 		Coffee s = coffeeMapper.selectByPrimaryKey(1L);
 		log.info("Coffee {} ",s);
 
@@ -72,6 +83,22 @@ public class SpringbucksApplication implements ApplicationRunner {
 		List<Coffee> list = coffeeMapper.selectByExample(example);
 		list.forEach(e->log.info("selectByExample: {}",e));
 
+	}
+
+	/**
+	 * pageHelper
+	 */
+	private void palyWithPageHelper(){
+		List<Coffee> list1 = coffeeMapperPageHelper.findAllWithRowBounds(new RowBounds(1,3));
+		list1.forEach(e->log.info("coffee_list1: {}",e));
+		List<Coffee> list2 = coffeeMapperPageHelper.findAllWithRowBounds(new RowBounds(2,3));
+		list2.forEach(e->log.info("coffee_list2: {}",e));
+		List<Coffee> list3 = coffeeMapperPageHelper.findAllWithRowBounds(new RowBounds(1,0));
+		list3.forEach(e->log.info("coffee_list3: {}",e));
+		List<Coffee> list4 = coffeeMapperPageHelper.findAllWithParam(2,1);
+		list4.forEach(e->log.info("coffee_list4: {}",e));
+		PageInfo page = new PageInfo(list4);
+		log.info("pageinfo: {}",page);
 	}
 
 
