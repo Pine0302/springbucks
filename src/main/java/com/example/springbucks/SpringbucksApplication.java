@@ -18,20 +18,22 @@ import org.mybatis.generator.config.xml.ConfigurationParser;
 import org.mybatis.generator.internal.DefaultShellCallback;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @SpringBootApplication
 @Slf4j
@@ -47,6 +49,12 @@ public class SpringbucksApplication implements ApplicationRunner {
 	@Autowired
 	private CoffeeMapperPageHelper coffeeMapperPageHelper;
 
+	@Autowired
+	private JedisPool jedisPool;
+
+	@Autowired
+	private JedisPoolConfig jedisPoolConfig;
+
 	public static void main(String[] args) {
 		SpringApplication.run(SpringbucksApplication.class, args);
 	}
@@ -56,7 +64,8 @@ public class SpringbucksApplication implements ApplicationRunner {
 		//generateArtifacts();
 		//playWithArtifacts();
 		//palyWithPageHelper();
-		playWithMongoCoffee();
+	//	playWithMongoCoffee();
+		playWithJedis();
 	}
 
 	private void generateArtifacts() throws Exception{
@@ -132,11 +141,42 @@ public class SpringbucksApplication implements ApplicationRunner {
 		log.info("saved coffee {} ", saved);
 
 		List<MongoCoffee> list = mongoTemplate.find(
-				Query.query(Criteria.where("name").is("espresso")), MongoCoffee.class);
+				Query.query(Criteria.where("name").is("latte")), MongoCoffee.class);
 		log.info("find {} coffee.", list.size());
 		list.forEach(c -> log.info("coffee:{}", c));
 	}
 
+	public void playWithJedis(){
+		log.info(jedisPoolConfig.toString());
+
+		CoffeeExample example = new CoffeeExample();
+		example.createCriteria().andNameEqualTo("latte");
+		List<Coffee> coffeeList = coffeeMapper.selectByExample(example);
+
+		try (Jedis jedis = jedisPool.getResource()) {
+			coffeeList.forEach(c->{
+				log.info("list : {}",c);
+				jedis.hset("coffee-menu",
+						c.getName(),Long.toString(c.getPrice().getAmountMinorLong()));
+			});
+			Map<String,String> menu = jedis.hgetAll("coffee-menu");
+			String lattePrice = jedis.hget("coffee-menu","latte");
+			log.info("Menu : {}",menu);
+			log.info("lattePrice : {}",lattePrice);
+		} catch(Exception ex) {
+			ex.printStackTrace();
+		}
+	}
 
 
+	@Bean
+	@ConfigurationProperties("redis")
+	public JedisPoolConfig jedisPoolConfig(){
+		return new JedisPoolConfig();
+	}
+
+	@Bean(destroyMethod = "close")
+	public JedisPool jedisPool(@Value("${redis.host}") String host){
+		return new JedisPool( (jedisPoolConfig()),host);
+	}
 }
